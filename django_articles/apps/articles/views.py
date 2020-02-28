@@ -1,6 +1,7 @@
-from django.http import Http404
+from django.http import Http404, HttpResponseRedirect
 from requests import HTTPError
 from django.shortcuts import render
+from django.urls import reverse
 
 from .models import Article
 
@@ -17,5 +18,23 @@ def detail(request, article_id):
         a = Article.objects.get(id=article_id)
     except HTTPError:
         raise Http404("Aricle not found")
+    
+    latest_comments_list = a.comment_set.order_by('-id')[:10]
 
-    return render(request, 'articles/detail.html', {'article': a})
+    return render(
+        request, 'articles/detail.html',
+        {'article': a, 'latest_comments_list': latest_comments_list}
+    )
+
+
+def leave_comment(request, article_id):
+    try:
+        a = Article.objects.get(id=article_id)
+    except HTTPError:
+        raise Http404("Aricle not found")
+
+    a.comment_set.create(
+        author_name=request.POST['name'],
+        comment_text=request.POST['text'])
+
+    return HttpResponseRedirect(reverse('articles:detail', args=(a.id,)))
